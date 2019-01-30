@@ -134,7 +134,7 @@ const associateCachedFile = async function (downloadResult) {
               nfo:FileDataObject;
               nfo:fileName "${uid}";
               dct:format "${downloadResult.result.headers['content-type']}";
-              nfo:fileSize "${downloadResult.result.headers['content-type']}";
+              nfo:fileSize "${downloadResult.result.headers['content-length']}";
               dbpedia:fileExtension "${downloadResult.result.headers['content-type'].split('/')[1]}";
               nfo:fileCreated "${downloadResult.result.headers['date']}";
               <http://mu.semte.ch/vocabularies/core/uuid> "${uid}".
