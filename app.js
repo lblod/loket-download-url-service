@@ -18,11 +18,15 @@ app.get('/checkurls', async function( req, res ) {
     
       OPTIONAL { 
         ?uri ext:fileAddressCacheStatus ?statusUri .
-        ?statusUri ext:fileAddressCacheStatusTimesRetried ?times;
-                  ext:fileAddressCacheStatusLabel ?statusLabel.
+        ?statusUri ext:fileAddressCacheStatusTimesRetried ?times.
+      }
+    
+      OPTIONAL { 
+        ?uri ext:fileAddressCacheStatus ?statusUri .
+        ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel.
       }
 
-      FILTER (?statusLabel != "cached")
+      FILTER (?statusLabel != "cached" && ?times < ${MAX_TRIES})
     }`;
 
   let response = await query(q);
@@ -42,6 +46,8 @@ app.get('/checkurls', async function( req, res ) {
 });
 
 app.use(errorHandler);
+
+const MAX_TRIES = 10;
 
 const updateStatus = async function (downloadResult) {
 
@@ -107,7 +113,6 @@ const downloadFile = async function (fileAddress) {
 
 const associateCachedFile = async function (downloadResult) {
   if (! downloadResult.hasOwnProperty('cachedFileAddress')) {
-    debugger;
     return null;
   }
 
