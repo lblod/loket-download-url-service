@@ -1,0 +1,21 @@
+{
+  "name": "loket-download-url-service",
+  "version": "0.3.4",
+  "description": "Microservice to generate packages based on bbcdr report information",
+  "dependencies": {
+    "cron": "^1.3.0",
+    "fs-extra": "^5.0.0",
+    "request": "^2.88.0",
+    "mime-types": "2.1.21"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lblod/loket-download-url-service.git"
+  },
+  "author": "redpencil.io",
+  "license": "MIT"
+}
