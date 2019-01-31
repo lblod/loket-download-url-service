@@ -12,26 +12,25 @@ app.get('/checkurls', async function( req, res ) {
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     SELECT ?uri ?url ?times ?statusLabel {
-    
+
       ?uri a ext:FileAddress ;
           ext:fileAddress ?url .
-    
+
       OPTIONAL { 
         ?uri ext:fileAddressCacheStatus ?statusUri .
-        ?statusUri ext:fileAddressCacheStatusTimesRetried ?times.
+        ?statusUri ext:fileAddressCacheStatusTimesRetried ?times .
       }
-    
+
       OPTIONAL { 
         ?uri ext:fileAddressCacheStatus ?statusUri .
         ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel.
       }
-
-      FILTER (?statusLabel != "cached" && ?times < ${MAX_TRIES})
+      FILTER (?statusLabel != "cached" && (!BOUND(?times) || ?times < ${MAX_TRIES}))
     }`;
 
   let response = await query(q);
   let fileAddresses = response.results.bindings;
-
+  
   let promises = fileAddresses.map( async (fileAddress) => {
     //--- download the content from fileAddress
     let downloadResult = await downloadFile(fileAddress);
@@ -47,7 +46,7 @@ app.get('/checkurls', async function( req, res ) {
 
 app.use(errorHandler);
 
-const MAX_TRIES = 10;
+const MAX_TRIES = 3;
 
 const updateStatus = async function (downloadResult) {
 
@@ -157,3 +156,7 @@ const associateCachedFile = async function (downloadResult) {
     return null;
   }
 }
+
+
+
+
