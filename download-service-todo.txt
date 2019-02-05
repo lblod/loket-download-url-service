@@ -39,6 +39,10 @@ Please once the are resolve, mark them somehow as resolved, so we can keep track
 - we need clean up logic here. If something fails during writing of the file, and the file exists (albeit partially) we need to clean it up.
   Use:  fs.unlinkSync(path); //after first having checked the file exists.
   https://github.com/lblod/loket-download-url-service/blob/master/app.js#L109
+  
+- line https://github.com/lblod/loket-download-url-service/blob/master/app.js#L150
+  misses dbpedia prefix
+
 
 
 CREATION OF THE FILE DATA (function associateCachedFile)
@@ -109,6 +113,7 @@ CREATION OF THE FILE DATA (function associateCachedFile)
                  ##################################################################
 
                 dbpedia:fileExtension "${downloadResult.result.headers['content-type'].split('/')[1]}";
+                
                  ##################################################################
                  # nfo:fileExtensions: use the one extracted from .${mime.extension(mimeType)}`;
                  ##################################################################
