@@ -206,5 +206,5 @@ NEW FEATURES
  - SEAS should be used
 - [NEXT ITERATION] in the url box in frontend, display a link to the cached file so it can be downloaded
 - [NEXT ITERATION] If we have HTML, download images
-- [NEXT ITERATION] handle funky ssl issues
+- [NEXT ITERATION] handle funky ssl issues (use https://www.npmjs.com/package/ssl-root-cas)
 - [NEXT ITERATION] handle sinlge page app
