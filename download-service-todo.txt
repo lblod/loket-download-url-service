@@ -203,6 +203,7 @@ NEW FEATURES
 - Quite often, the mime type is not provided. https://github.com/lblod/loket-download-url-service/blob/master/app.js#L103 We have libraries to tackle these.
  But as first mvp, let's do .txt as a default
  - Actually we need only to download the files, associated with an inzending for toezicht on status 'VERSTUURD'
+ - SEAS should be used
 - [NEXT ITERATION] in the url box in frontend, display a link to the cached file so it can be downloaded
 - [NEXT ITERATION] If we have HTML, download images
 - [NEXT ITERATION] handle funky ssl issues
