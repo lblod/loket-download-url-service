@@ -1,16 +1,29 @@
 import { app, query, errorHandler, uuid } from 'mu';
+import { CronJob } from 'cron';
 import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
 
-const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 3;
+const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 
 app.get('/', function( req, res ) {
   res.send('Hello mu-javascript-template');
 } );
 
-app.get('/checkurls', async function( req, res ) {
+const cronFrequency = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
+
+new CronJob(cronFrequency, async function() {
+  console.log(`Download-url service triggered by cron job at ${new Date().toISOString()}`);
+  await fetchingJob();
+}, null, true);
+
+app.get('/checkurls', async function( req, res ){
+  fetchingJob();
+  res.send("Started");
+})
+
+const fetchingJob = async function() {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
@@ -44,8 +57,7 @@ app.get('/checkurls', async function( req, res ) {
   });
 
   await Promise.all(promises);
-  res.send("Done");
-});
+};
 
 app.use(errorHandler);
 
@@ -156,14 +168,4 @@ const associateCachedFile = async function (downloadResult) {
   catch (err) {
     return null;
   }
-
-  const cronFrequency = process.env.CACHING_CRON_PATTERN || '*/30 * * * * *';
-  new CronJob(cronFrequency, function() {
-    console.log(`Download-url service triggered by cron job at ${new Date().toISOString()}`);
-    deliverPackages();
-  }, null, true);
 }
-
-
-
-
