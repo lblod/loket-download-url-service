@@ -157,6 +157,11 @@ const associateCachedFile = async function (downloadResult) {
     return null;
   }
 
+  const cronFrequency = process.env.CACHING_CRON_PATTERN || '*/30 * * * * *';
+  new CronJob(cronFrequency, function() {
+    console.log(`Download-url service triggered by cron job at ${new Date().toISOString()}`);
+    deliverPackages();
+  }, null, true);
 }
 
 
