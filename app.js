@@ -3,6 +3,9 @@ import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
 
+const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 3;
+const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
+
 app.get('/', function( req, res ) {
   res.send('Hello mu-javascript-template');
 } );
@@ -25,7 +28,7 @@ app.get('/checkurls', async function( req, res ) {
         ?uri ext:fileAddressCacheStatus ?statusUri .
         ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel.
       }
-      FILTER (?statusLabel != "cached" && (!BOUND(?times) || ?times < ${MAX_TRIES}))
+      FILTER (?statusLabel != "cached" && (!BOUND(?times) || ?times < ${CACHING_MAX_RETRIES}))
     }`;
 
   let response = await query(q);
@@ -45,8 +48,6 @@ app.get('/checkurls', async function( req, res ) {
 });
 
 app.use(errorHandler);
-
-const MAX_TRIES = 3;
 
 const updateStatus = async function (downloadResult) {
 
@@ -99,7 +100,7 @@ const downloadFile = async function (fileAddress) {
       //check things about the response here.
       const mimeType = resp.headers['content-type'];
       //write the file
-      let localAddress = `/data/files/${uuid()}.${mime.extension(mimeType)}`;
+      let localAddress = `${FILE_STORAGE}/${uuid()}.${mime.extension(mimeType)}`;
       r.pipe(fs.createWriteStream(localAddress));
       resolve({resource: fileAddress, result: resp, cachedFileAddress:localAddress});
     });
@@ -155,6 +156,7 @@ const associateCachedFile = async function (downloadResult) {
   catch (err) {
     return null;
   }
+
 }
 
 
