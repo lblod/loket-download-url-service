@@ -8,7 +8,19 @@ const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 
 app.get('/', function( req, res ) {
-  res.send('Hello mu-javascript-template');
+  res.send(`
+Welcome to the dowload url service.
+
+This service periodically looks for urls and tries to download and store their content locally, if not already stored. You can force it to run immediately by visiting /checkurls subroute. This service utilizes these environment variables:
+    
+  FILE_STORAGE
+    The local storage of files
+
+  CACHING_MAX_RETRIES
+    How many times will the service try to download a resource before considering it as failed.
+    
+  CACHING_CRON_PATTERN
+    The time interval of service's re-execution.`);
 } );
 
 const cronFrequency = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
