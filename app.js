@@ -23,11 +23,15 @@ const STATUS_RESOURCES_PATH = "http://data.lblod.info/file-address-cache-statuse
 
 /**
  * States of a FileAddress object
+ * PENDING : is being downloaded
+ * FAILED : last download has failed
+ * CACHED : has been successfully cached
+ * DEAD : has been tried for the maximum allowed times
  */
-const PENDING = sparqlEscapeString( 'pending' );
-const FAILED = sparqlEscapeString( 'failed' );
-const CACHED = sparqlEscapeString( 'cached' );
-const DEAD = sparqlEscapeString( 'dead' );
+const PENDING = 'pending';
+const FAILED = 'failed';
+const CACHED = 'cached';
+const DEAD = 'dead';
 
 app.get('/', function( req, res ) {
   res.send(`
@@ -69,7 +73,7 @@ new CronJob(CRON_FREQUENCY, async function() {
 //------ cached
 //------ dead
 const fetchingJob = async function() {
-
+  
   //--- get a list of all failed FileAddress objects
   let q = `
     PREFIX ${EXT_PREFIX}
@@ -92,7 +96,7 @@ const fetchingJob = async function() {
       FILTER (
         # old filter, kept temporarily as a reference
         #(?statusLabel != ${CACHED} && ?statusLabel != ${PENDING} && ?statusLabel != ${DEAD})
-        (!BOUND(?statusLabel) || ?statusLabel = ${FAILED})
+        (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
         && 
         (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(CACHING_MAX_RETRIES)})
       )
@@ -103,30 +107,79 @@ const fetchingJob = async function() {
 
   //--- start the process of downloading the resources
   let promises = fileAddresses.map( async (fileAddress) => {
-    try {
-      //--- download the content from fileAddress
-      let downloadResult = await downloadFile(fileAddress);
 
-      //--- associate the downloaded file to the fileAddress
-      await associateCachedFile(downloadResult);
+    const uri = fileAddress.uri.value;
+    const url = fileAddress.url.value;
+    const timesTried = fileAddress.hasOwnProperty('timesTried') ? fileAddress.timesTried : 0;
+
+    let downloadResult = null;
+    let associationResult = null;
+
+    console.log(`Enqueuing ${url}`);
+    console.log(`          ${uri}`);
+    try {
+      //--- setting fileAddress's status to 'downloading' prevents us from
+      //--- redownloading a resource in case it's download
+      //--- takes longer than our iteration interval
+      await setStatus (uri, PENDING, null, timesTried);
     }
     catch (err) {
-      console.log('Error while processing a resource.');
-      console.log(`  resource uri: ${fileAddress.uri.value}`);
-      console.log(`  error: ${err}`);
+      return;
     }
-    finally {
-      //--- update the cachedStatus of the fileAddress
-      await updateStatus(downloadResult);
+  
+    try {
+      //--- download the content of fileAddress
+      downloadResult = await downloadFile(fileAddress);
     }
+    catch (err) {
+      //--- A connection to the remote resource was not established
+      //--- update the cachedStatus of the fileAddress to either FAILED or DEAD
+      await setStatus(uri, statLabel(timesTried), null, timesTried + 1);
+      return;
+    }
+    
+    if (downloadResult.successfull) {
+      try {
+        console.log(`Associating ${uri}`);
+        console.log(`            ${url}`);
+        //--- associate the downloaded file to the fileAddress
+        associationResult = await associateCachedFile(downloadResult);
+      }
+      catch (err) {
+        //--- The file has been successfully deleted but it could not be associated
+        //--- with the FileAddress object in the database, maybe for some database error.
+        //--- We need to clean up
+        fs.unlink(downloadResult.cachedFileAddress, (err) => {
+          console.log (`${downloadResult.cachedFileAddress} was ${err ? 'not' : 'successfully'} deleted`);
+        });
+        //--- Since this failure was not due to the remote server, we will try it again
+        //--- So, we don't inrease the timesTried value
+        await setStatus(uri, FAILED, null, timesTried);
+        return;
+      }
+    } else {
+      //--- Due to an error on the remote resource side, the file could not be downloaded
+      //--- update the cachedStatus of the fileAddress to either FAILED or DEAD
+      await setStatus(uri, statLabel(timesTried), parseInt(downloadResult.result.statusCode), timesTried + 1);
+      return;
+    }
+
+    //--- File was successfully downloaded and cached
+    //--- update the cachedStatus of the fileAddress to CACHED
+    await setStatus(uri, CACHED, parseInt(downloadResult.result.statusCode), timesTried + 1);
+    console.log (`${url} is cached successfully`);
   });
 
   await Promise.all(promises);
 };
 
+const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; }
+
 const setStatus = async function (uri, statusLabel, responseCode = null, timesTried = 0) {
 
-  const uri = downloadResult.resource.uri.value;
+  console.log(`Setting ${statusLabel} status for ${uri}`);
+  
+  const uid = uuid();
 
   let q = `
     PREFIX ${EXT_PREFIX}
@@ -167,54 +220,63 @@ const setStatus = async function (uri, statusLabel, responseCode = null, timesTr
     return await query( q );
   }
   catch (err) {
+    console.log(`Error while setting ${statusLabel} status`);
+    console.log(` resource: ${uri}`);
+    console.log(` error: ${err}`);
     throw err;
   }
 }
 
-const updateStatus = async function (downloadResult) {
-
-  //--- look for data about server response code 
-  const responseCode = downloadResult.result.hasOwnProperty('statusCode') ? parseInt(downloadResult.result.statusCode) : null;
-  const statusLabel = responseCode === 200 ? CACHED : FAILED;
-
-  //--- check how many times had this resource been proceessed before this
-  const timesTried = (downloadResult.resource.hasOwnProperty('timesTried') ? parseInt(downloadResult.resource.timesTried.value) : 0) + 1;
-
-  const uri = downloadResult.resource.uri.value;
-  return await setStatus (uri, statusLabel, responseCode, timesTried);
-}
-
 const makeFileName = function() {
-  return uid();
+  return uuid();
 }
 const downloadFile = async function (fileAddress) {
 
-  const uri = fileAddress.uri.value;
   return new Promise((resolve, reject) => {
 
-    //--- setting fileAddress's status to 'downloading' prevents us from
-    //--- redownloading a resource in case it's download
-    //--- takes longer than our iteration interval
-    const timesTried = fileAddress.hasOwnProperty('timesTried') ? fileAddress.timesTried : 0;
-    await setStatus (uri, "downloading", timesTried);
-
+    const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
     let r = request(url);
 
     r.on('response', (resp) => {
       //check things about the response here.
-      const mimeType = resp.headers['content-type'];
-      //write the file
-      let extension = mime.extension(mimeType);
-      let bareName = makeFileName();
-      let physicalFileName = [bareName, extension].join('.');
-      let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
-      r.pipe(fs.createWriteStream(localAddress));
-      resolve({resource: fileAddress, result: resp, cachedFileAddress:localAddress, cachedFileName:physicalFileName, bareName:bareName, extension:extension});
+      const code = resp.statusCode;
+      const c = 100 * Math.floor(code/100);
+      switch (c) {
+        case 200:
+          //--- OK
+          //--- write the file
+          const mimeType = resp.headers['content-type'];
+          let extension = mime.extension(mimeType);
+          let bareName = makeFileName();
+          let physicalFileName = [bareName, extension].join('.');
+          let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
+
+          r.pipe(fs.createWriteStream(localAddress));
+
+          resolve({
+            successfull: true,
+            resource: fileAddress,
+            result: resp, 
+            cachedFileAddress: localAddress, 
+            cachedFileName: physicalFileName, 
+            bareName: bareName, 
+            extension: extension
+          });
+          break;
+        case 300:
+        case 400:
+        case 500:
+        default:
+          //--- NO OK
+          resolve({ successfull: false, resource: fileAddress, result: resp });
+          break;
+      }
     });
 
     r.on('error', (err) => {
       console.log("Error while downloading a remote resource:");
+      console.log(`  remote resource: ${uri}`);
       console.log(`  remote url: ${url}`);
       console.log(`  error: ${err}`)
       reject({resource: fileAddress, error: err});
@@ -275,4 +337,5 @@ const associateCachedFile = async function (downloadResult) {
     throw err;
   }
 }
+
 
