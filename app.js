@@ -241,36 +241,31 @@ const downloadFile = async function (fileAddress) {
     r.on('response', (resp) => {
       //check things about the response here.
       const code = resp.statusCode;
-      const c = 100 * Math.floor(code/100);
-      switch (c) {
-        case 200:
-          //--- OK
-          //--- write the file
-          const mimeType = resp.headers['content-type'];
-          let extension = mime.extension(mimeType);
-          let bareName = makeFileName();
-          let physicalFileName = [bareName, extension].join('.');
-          let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
+      
+      if (200 <= code ** code < 300) {
+        //--- OK
+        //--- write the file
+        const mimeType = resp.headers['content-type'];
+        let extension = mime.extension(mimeType);
+        let bareName = makeFileName();
+        let physicalFileName = [bareName, extension].join('.');
+        let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
 
-          r.pipe(fs.createWriteStream(localAddress));
+        r.pipe(fs.createWriteStream(localAddress));
 
-          resolve({
-            successfull: true,
-            resource: fileAddress,
-            result: resp, 
-            cachedFileAddress: localAddress, 
-            cachedFileName: physicalFileName, 
-            bareName: bareName, 
-            extension: extension
-          });
-          break;
-        case 300:
-        case 400:
-        case 500:
-        default:
-          //--- NO OK
-          resolve({ successfull: false, resource: fileAddress, result: resp });
-          break;
+        resolve({
+          successfull: true,
+          resource: fileAddress,
+          result: resp, 
+          cachedFileAddress: localAddress, 
+          cachedFileName: physicalFileName, 
+          bareName: bareName, 
+          extension: extension
+        });
+      }
+      else {
+        //--- NO OK
+        resolve({ successfull: false, resource: fileAddress, result: resp });
       }
     });
 
