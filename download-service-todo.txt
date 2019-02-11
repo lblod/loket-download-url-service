@@ -8,39 +8,42 @@ COMMENTS
 Please once the are resolve, mark them somehow as resolved, so we can keep track of everything ;-)
 
 
-- missing environment variables
-- remove: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L6 or replace with some decent hello message: https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L10
-- missing: cronjobs
-- why duplication?: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L20
+x missing environment variables
+x remove: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L6 or replace with some decent hello message: https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L10
+x missing: cronjobs
+! why duplication?: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L20
 - [OPTIONAL]: replace "cached" with uri a little cleaner. But really not mandatarory
-- doublecheck whether this filter really really works:  https://github.com/lblod/loket-download-url-service/blob/master/app.js#L28
-- not entirely sure, but check wether the result of .bindings will ALWAYS be an array, else append it wiht a '|| []'
+x doublecheck whether this filter really really works:  https://github.com/lblod/loket-download-url-service/blob/master/app.js#L28
+  CAUTION: THIS FILTER HAS ENTIRELY CHANGED.
+x not entirely sure, but check wether the result of .bindings will ALWAYS be an array, else append it wiht a '|| []'
   (or you can do this by default): https://github.com/lblod/loket-download-url-service/blob/master/app.js#L32
-- the whole procedure: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L11 should be separate function. Can be called by both cronjob and 'api call /checkurls'
-- we need an intermediate status 'downloading'.
+x the whole procedure: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L11 should be separate function. Can be called by both cronjob and 'api call /checkurls'
+x we need an intermediate status 'downloading'.
   Why? because suppose download takes long time and cronjob starts again. This might lead to duplicate files. We don't want this. See also:
   https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L22
+  CAUTION: EVEN MORE STATUSSES HAVE BEEN INTRODUCED
 - Somehow, in our other services with similar flow, we don't wait for all promises to resolve.
   I am unsure why though, but I don't see a danger here to not wait for all promises to resolve,
   So I would skip the waiting here too: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L43
-- perhaps send a "job started message" instead: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L44
-- like other services put this at the end of your file: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L47
-- any reason why you use reslove instead of reject (which throws error)
-- (for reasons which will be clear later)
+! perhaps send a "job started message" instead: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L44
+! like other services put this at the end of your file: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L47
+x any reason why you use reslove instead of reject (which throws error)
+x (for reasons which will be clear later)
   let localAddress = `${FILE_STORAGE}/${uuid()}.${mime.extension(mimeType)}`; -> store the filename in a separate key in you hash
   So do
   let physicalFileName =${uuid()}.${mime.extension(mimeType)};
   let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
   //and later in this function return
   return { ...., physicalFileName }
+  CAUTION: MORE KEYS HAVE BEEN INTRODUCED
 
 
-- we still miss error handling here: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L37 (try/catch? and update status accordingly)
-- we need clean up logic here. If something fails during writing of the file, and the file exists (albeit partially) we need to clean it up.
+! we still miss error handling here: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L37 (try/catch? and update status accordingly)
+x we need clean up logic here. If something fails during writing of the file, and the file exists (albeit partially) we need to clean it up.
   Use:  fs.unlinkSync(path); //after first having checked the file exists.
   https://github.com/lblod/loket-download-url-service/blob/master/app.js#L109
   
-- line https://github.com/lblod/loket-download-url-service/blob/master/app.js#L150
+x line https://github.com/lblod/loket-download-url-service/blob/master/app.js#L150
   misses dbpedia prefix
 
 
