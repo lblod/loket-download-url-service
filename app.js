@@ -201,7 +201,7 @@ const associateCachedFile = async function (downloadResult) {
   let result = await createVirtualFileDataObject(fileObjectUri, uri, name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
 
   //create the physical file
-  let physicalUri = 'share:/' + downloadResult.cachedFileAddress; //we assume absolute path
+  let physicalUri = 'share://' + downloadResult.cachedFileName; //we assume filename here
   let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
                                                               fileObjectUri,
                                                               name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
