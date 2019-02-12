@@ -89,7 +89,7 @@ const setStatus = async function (uri, statusLabel, responseCode = null, timesTr
     }
     WHERE {
       GRAPH ?g {
-        ?s a ext:FileAddress
+        ${sparqlEscapeUri(uri)} a ext:FileAddress.
       }
       BIND(IRI(${sparqlEscapeString([STATUS_RESOURCES_PATH, statusLabel, uid].join('/'))}) as ?statusUri).
     }
@@ -115,7 +115,7 @@ const createVirtualFileDataObject = async function(fileObjectUri, fileAddressUri
     PREFIX ${DCT_PREFIX}
 
     INSERT {
-      GRAPH ?g {
+      GRAPH <http://mu.semte.ch/graphs/public> {
         # make a file resource
         ${sparqlEscapeUri(fileObjectUri)} a
             nfo:FileDataObject;
@@ -129,13 +129,6 @@ const createVirtualFileDataObject = async function(fileObjectUri, fileAddressUri
         # associate it to our original FileAddress object
         ${sparqlEscapeUri(fileAddressUri)} nie:dataSource  ${sparqlEscapeUri(fileObjectUri)}.
 
-        #HACK for the sprintf issue
-        ${sparqlEscapeUri(fileAddressUri)} ?p ?o.
-      }
-    }
-    WHERE {
-      GRAPH ?g {
-        ${sparqlEscapeUri(fileAddressUri)} a ext:FileAddress.
         #HACK for the sprintf issue
         ${sparqlEscapeUri(fileAddressUri)} ?p ?o.
       }
@@ -154,7 +147,7 @@ const createPhysicalFileDataObject = async function(fileObjectUri, dataSourceUri
     PREFIX ${DCT_PREFIX}
 
     INSERT {
-      GRAPH ?g {
+      GRAPH <http://mu.semte.ch/graphs/public> {
         ${sparqlEscapeUri(fileObjectUri)} a nfo:FileDataObject;
               nfo:fileName ${sparqlEscapeString(name)};
               nie:dataSource ${sparqlEscapeUri(dataSourceUri)};
@@ -164,13 +157,6 @@ const createPhysicalFileDataObject = async function(fileObjectUri, dataSourceUri
               dbpedia:fileExtension ${sparqlEscapeString(extension)};
               nfo:fileCreated ${sparqlEscapeDate(created)}.
 
-        #HACK for the sprintf issue
-        ${sparqlEscapeUri(dataSourceUri)} ?p ?o.
-      }
-    }
-    WHERE {
-      GRAPH ?g {
-        ${sparqlEscapeUri(dataSourceUri)} a nfo:FileDataObject.
         #HACK for the sprintf issue
         ${sparqlEscapeUri(dataSourceUri)} ?p ?o.
       }
