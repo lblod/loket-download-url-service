@@ -200,15 +200,25 @@ const associateCachedFile = async function (downloadResult) {
   try {
     let fileCreationResult = await query( q );
     return fileCreationResult;
+
+ //First create the virtual file.
+  let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
+  let result = await createVirtualFileDataObject(fileObjectUri, uri, name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
+
+  //create the physical file
+  let physicalUri = 'share:/' + downloadResult.cachedFileAddress; //we assume absolute path
+  let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
+                                                              fileObjectUri,
+                                                              name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
   }
   catch (err) {
     console.log('Error while associating a downloaded file to a FileAddress object');
+    console.log(err);
     console.log(`  downloaded file: ${downloadResult.cachedFileAddress}`);
     console.log(`  FileAddress object: ${uri}`);
     throw err;
   }
-}
-
+};
 
 const cleanUpFile = function(path){
   if(fs.existsSync(path)){
