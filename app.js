@@ -34,9 +34,8 @@ This service periodically looks for urls and tries to download and store their c
  * This route can be used to force an immidiate run of the service
  */
 app.get('/checkurls', async function( req, res ){
-  await fetchingJob();
-  res.send(`Started.
-  Repeating pattern: ${CRON_FREQUENCY}`);
+  fetchingJob();
+  res.send(`Started. Repeating pattern: ${CRON_FREQUENCY}`);
 });
 
 app.use(errorHandler);
@@ -59,7 +58,7 @@ const fetchingJob = async function() {
   let fileAddresses = response.results.bindings;
 
   //--- start the process of downloading the resources
-  let promises = fileAddresses.slice(1,3).map( async (fileAddress) => {
+  let promises = fileAddresses.map( async (fileAddress) => {
 
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
