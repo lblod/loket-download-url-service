@@ -102,9 +102,8 @@ const fetchingJob = async function() {
         //--- The file has been successfully deleted but it could not be associated
         //--- with the FileAddress object in the database, maybe for some database error.
         //--- We need to clean up
-        fs.unlink(downloadResult.cachedFileAddress, (err) => {
-          console.log (`${downloadResult.cachedFileAddress} was ${err ? 'not' : 'successfully'} deleted`);
-        });
+        cleanUpFile(downloadResult.cachedFileAddress);
+         console.log('hello')
         //--- Since this failure was not due to the remote server, we will try it again
         //--- So, we don't inrease the timesTried value
         await setStatus(uri, FAILED, null, timesTried);
@@ -204,3 +203,8 @@ const associateCachedFile = async function (downloadResult) {
 }
 
 
+const cleanUpFile = function(path){
+  if(fs.existsSync(path)){
+    fs.unlinkSync(path);
+  }
+};
