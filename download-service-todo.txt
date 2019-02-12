@@ -8,26 +8,26 @@ COMMENTS
 Please once the are resolve, mark them somehow as resolved, so we can keep track of everything ;-)
 
 
-x missing environment variables
-x remove: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L6 or replace with some decent hello message: https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L10
-x missing: cronjobs
-! why duplication?: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L20
+OK missing environment variables
+OK remove: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L6 or replace with some decent hello message: https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L10
+- missing: cronjobs
+OK why duplication?: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L20
 - [OPTIONAL]: replace "cached" with uri a little cleaner. But really not mandatarory
-x doublecheck whether this filter really really works:  https://github.com/lblod/loket-download-url-service/blob/master/app.js#L28
+OK doublecheck whether this filter really really works:  https://github.com/lblod/loket-download-url-service/blob/master/app.js#L28
   CAUTION: THIS FILTER HAS ENTIRELY CHANGED.
-x not entirely sure, but check wether the result of .bindings will ALWAYS be an array, else append it wiht a '|| []'
+OK not entirely sure, but check wether the result of .bindings will ALWAYS be an array, else append it wiht a '|| []'
   (or you can do this by default): https://github.com/lblod/loket-download-url-service/blob/master/app.js#L32
-x the whole procedure: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L11 should be separate function. Can be called by both cronjob and 'api call /checkurls'
-x we need an intermediate status 'downloading'.
+OK the whole procedure: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L11 should be separate function. Can be called by both cronjob and 'api call /checkurls'
+OK we need an intermediate status 'downloading'.
   Why? because suppose download takes long time and cronjob starts again. This might lead to duplicate files. We don't want this. See also:
   https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L22
   CAUTION: EVEN MORE STATUSSES HAVE BEEN INTRODUCED
 - Somehow, in our other services with similar flow, we don't wait for all promises to resolve.
   I am unsure why though, but I don't see a danger here to not wait for all promises to resolve,
   So I would skip the waiting here too: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L43
-! perhaps send a "job started message" instead: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L44
-! like other services put this at the end of your file: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L47
-x any reason why you use reslove instead of reject (which throws error)
+OK perhaps send a "job started message" instead: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L44
+OK like other services put this at the end of your file: https://github.com/lblod/loket-download-url-service/blob/master/app.js#L47
+OK any reason why you use reslove instead of reject (which throws error)
 x (for reasons which will be clear later)
   let localAddress = `${FILE_STORAGE}/${uuid()}.${mime.extension(mimeType)}`; -> store the filename in a separate key in you hash
   So do
@@ -201,7 +201,8 @@ FUNCTION  updateStatus
 
 NEW FEATURES
 -------------
-- I don't know what happens if you have a 30X redirect. Some clients follow the redirect others just errors. We have to check (be in in the doc, or by hand)
+- The jobs in PENDING should have timeout
+OK I don't know what happens if you have a 30X redirect. Some clients follow the redirect others just errors. We have to check (be in in the doc, or by hand)
   We have to make sure we have the redirect. https://github.com/lblod/loket-download-url-service/blob/master/app.js#L97
 - Quite often, the mime type is not provided. https://github.com/lblod/loket-download-url-service/blob/master/app.js#L103 We have libraries to tackle these.
  But as first mvp, let's do .txt as a default
