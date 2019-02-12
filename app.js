@@ -19,7 +19,7 @@ app.get('/', function( req, res ) {
 Welcome to the dowload url service.
 
 This service periodically looks for urls and tries to download and store their content locally, if not already stored. You can force it to run immediately by visiting /checkurls subroute. This service utilizes these environment variables:
-    
+
   FILE_STORAGE
     The local storage of files
 
@@ -59,7 +59,7 @@ const fetchingJob = async function() {
   let fileAddresses = response.results.bindings;
 
   //--- start the process of downloading the resources
-  let promises = fileAddresses.map( async (fileAddress) => {
+  let promises = fileAddresses.slice(1,3).map( async (fileAddress) => {
 
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
@@ -79,7 +79,7 @@ const fetchingJob = async function() {
     catch (err) {
       return;
     }
-  
+
     try {
       //--- download the content of fileAddress
       downloadResult = await downloadFile(fileAddress);
@@ -90,8 +90,8 @@ const fetchingJob = async function() {
       await setStatus(uri, statLabel(timesTried), null, timesTried + 1);
       return;
     }
-    
-    if (downloadResult.successfull) {
+
+    if (downloadResult.successful) {
       try {
         console.log(`Associating ${uri}`);
         console.log(`            ${url}`);
@@ -99,11 +99,10 @@ const fetchingJob = async function() {
         associationResult = await associateCachedFile(downloadResult);
       }
       catch (err) {
-        //--- The file has been successfully deleted but it could not be associated
+        //--- The file has been successfuly deleted but it could not be associated
         //--- with the FileAddress object in the database, maybe for some database error.
         //--- We need to clean up
         cleanUpFile(downloadResult.cachedFileAddress);
-         console.log('hello')
         //--- Since this failure was not due to the remote server, we will try it again
         //--- So, we don't inrease the timesTried value
         await setStatus(uri, FAILED, null, timesTried);
@@ -116,19 +115,19 @@ const fetchingJob = async function() {
       return;
     }
 
-    //--- File was successfully downloaded and cached
+    //--- File was successfuly downloaded and cached
     //--- update the cachedStatus of the fileAddress to CACHED
     await setStatus(uri, CACHED, parseInt(downloadResult.result.statusCode), timesTried + 1);
-    console.log (`${url} is cached successfully`);
+    console.log (`${url} is cached successfuly`);
   });
 };
 
-const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; }
-
+const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; };
 
 const makeFileName = function() {
   return uuid();
-}
+};
+
 const downloadFile = async function (fileAddress) {
 
   return new Promise((resolve, reject) => {
@@ -140,7 +139,8 @@ const downloadFile = async function (fileAddress) {
     r.on('response', (resp) => {
       //check things about the response here.
       const code = resp.statusCode;
-      
+
+      //Note: by default, redirects are followed :-)
       if (200 <= code && code < 300) {
         //--- OK
         //--- write the file
@@ -171,7 +171,7 @@ const downloadFile = async function (fileAddress) {
       }
       else {
         //--- NO OK
-        resolve({ successfull: false, resource: fileAddress, result: resp });
+        resolve({ successful: false, resource: fileAddress, result: resp });
       }
     });
 
@@ -179,7 +179,7 @@ const downloadFile = async function (fileAddress) {
       console.log("Error while downloading a remote resource:");
       console.log(`  remote resource: ${uri}`);
       console.log(`  remote url: ${url}`);
-      console.log(`  error: ${err}`)
+      console.log(`  error: ${err}`);
       reject({resource: fileAddress, error: err});
     });
   });
@@ -187,10 +187,8 @@ const downloadFile = async function (fileAddress) {
 
 const associateCachedFile = async function (downloadResult) {
 
-  const uid = uuid();
   const uri = downloadResult.resource.uri.value;
   const name = downloadResult.cachedFileName;
-  const fileResourcePath = "http://data.lblod.info/files/";
   const headers = downloadResult.result.headers;
 
   //--- get the file's size
@@ -198,8 +196,6 @@ const associateCachedFile = async function (downloadResult) {
   const fileSize = stats.size;
 
   try {
-    let fileCreationResult = await query( q );
-    return fileCreationResult;
 
  //First create the virtual file.
   let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
