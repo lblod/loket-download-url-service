@@ -12,27 +12,6 @@ const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 const CRON_FREQUENCY = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
 
-/**
- * SPARQL constants
- */
-const UUID_URI = '<http://mu.semte.ch/vocabularies/core/uuid>';
-const EXT_PREFIX = 'ext: <http://mu.semte.ch/vocabularies/ext/>';
-const NFO_PREFIX = 'nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>';
-const NIE_PREFIX = 'nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>';
-const DCT_PREFIX = 'dct: <http://purl.org/dc/terms/>';
-const STATUS_RESOURCES_PATH = "http://data.lblod.info/file-address-cache-statuses";
-
-/**
- * States of a FileAddress object
- * PENDING : is being downloaded
- * FAILED : last download has failed
- * CACHED : has been successfully cached
- * DEAD : has been tried for the maximum allowed times
- */
-const PENDING = 'pending';
-const FAILED = 'failed';
-const CACHED = 'cached';
-const DEAD = 'dead';
 
 app.get('/', function( req, res ) {
   res.send(`
@@ -74,36 +53,8 @@ new CronJob(CRON_FREQUENCY, async function() {
 //------ cached
 //------ dead
 const fetchingJob = async function() {
-  
-  //--- get a list of all failed FileAddress objects
-  let q = `
-    PREFIX ${EXT_PREFIX}
 
-    SELECT ?uri ?url ?timesTried ?statusLabel {
-
-      ?uri a ext:FileAddress ;
-          ext:fileAddress ?url .
-
-      OPTIONAL { 
-        ?uri ext:fileAddressCacheStatus ?statusUri .
-        ?statusUri ext:fileAddressCacheStatusTimesRetried ?timesTried .
-      }
-
-      OPTIONAL { 
-        ?uri ext:fileAddressCacheStatus ?statusUri .
-        ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel.
-      }
-
-      FILTER (
-        # old filter, kept temporarily as a reference
-        #(?statusLabel != ${CACHED} && ?statusLabel != ${PENDING} && ?statusLabel != ${DEAD})
-        (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
-        && 
-        (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(CACHING_MAX_RETRIES)})
-      )
-    }
-  `;
-  let response = await query(q);
+  let response = await getFileAddressToDo();
   let fileAddresses = response.results.bindings;
 
   //--- start the process of downloading the resources
@@ -117,7 +68,7 @@ const fetchingJob = async function() {
     let associationResult = null;
 
     console.log(`Enqueuing ${url}`);
-    console.log(`          ${uri}`);
+
     try {
       //--- setting fileAddress's status to 'downloading' prevents us from
       //--- redownloading a resource in case it's download
@@ -174,57 +125,6 @@ const fetchingJob = async function() {
 
 const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; }
 
-const setStatus = async function (uri, statusLabel, responseCode = null, timesTried = 0) {
-
-  console.log(`Setting ${statusLabel} status for ${uri}`);
-  
-  const uid = uuid();
-
-  let q = `
-    PREFIX ${EXT_PREFIX}
-
-    DELETE { 
-      GRAPH ?g { 
-        ${sparqlEscapeUri(uri)} ext:fileAddressCacheStatus ?status .
-        ?status ?p ?o .
-      }
-    } 
-    WHERE { 
-      GRAPH ?g { 
-        ${sparqlEscapeUri(uri)} ext:fileAddressCacheStatus ?status .
-        ?status ?p ?o .
-      }
-    };
-
-    INSERT { 
-      GRAPH ?g { 
-        ?statusUri a 
-            ext:FileAddressCacheStatus ; 
-            ext:fileAddressCacheStatusLabel ${sparqlEscapeString(statusLabel)} ;
-            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)} ;` : ''}
-            ext:fileAddressCacheStatusTimesRetried ${sparqlEscapeInt(timesTried)};
-            ${UUID_URI} ${sparqlEscapeString(uid)} .
-        ${sparqlEscapeUri(uri)} ext:fileAddressCacheStatus ?statusUri . 
-      } 
-    } 
-    WHERE { 
-      GRAPH ?g { 
-        ?s a ext:FileAddress 
-      } 
-      BIND(IRI(${sparqlEscapeString([STATUS_RESOURCES_PATH, statusLabel, uid].join('/'))}) as ?statusUri).
-    }
-  `;
-
-  try {
-    return await query( q );
-  }
-  catch (err) {
-    console.log(`Error while setting ${statusLabel} status`);
-    console.log(` resource: ${uri}`);
-    console.log(` error: ${err}`);
-    throw err;
-  }
-}
 
 const makeFileName = function() {
   return uuid();
@@ -290,36 +190,6 @@ const associateCachedFile = async function (downloadResult) {
   const stats = fs.statSync(downloadResult.cachedFileAddress);
   const fileSize = stats.size;
 
-  let q = `
-    PREFIX ${EXT_PREFIX}
-    PREFIX ${NFO_PREFIX}
-    PREFIX ${NIE_PREFIX}
-    PREFIX ${DCT_PREFIX}
-
-    INSERT { 
-      GRAPH ?g {
-        # make a file resource
-        ?file a 
-            nfo:FileDataObject;
-            nfo:fileName ${sparqlEscapeString(name)};
-            dct:format ${sparqlEscapeString(headers['content-type'])};
-            nfo:fileSize ${sparqlEscapeInt(fileSize)};
-            dbpedia:fileExtension ${sparqlEscapeString(downloadResult.extension)};
-            nfo:fileCreated ${sparqlEscapeDate(headers['date'])};
-            ${UUID_URI} ${sparqlEscapeString(uid)}.
-
-        # associate it to our original FileAddress object
-        ${sparqlEscapeUri(uri)} nie:dataSource ?file. 
-      } 
-    } 
-    WHERE { 
-      GRAPH ?g { 
-        ?s a ext:FileAddress 
-      } 
-      BIND(IRI(${sparqlEscapeString([fileResourcePath, uid].join('/'))}) as ?file).
-    }
-  `;
-  
   try {
     let fileCreationResult = await query( q );
     return fileCreationResult;
