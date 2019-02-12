@@ -150,17 +150,24 @@ const downloadFile = async function (fileAddress) {
         let physicalFileName = [bareName, extension].join('.');
         let localAddress = path.join(FILE_STORAGE, physicalFileName);
 
-        r.pipe(fs.createWriteStream(localAddress));
-
-        resolve({
-          successfull: true,
-          resource: fileAddress,
-          result: resp, 
-          cachedFileAddress: localAddress, 
-          cachedFileName: physicalFileName, 
-          bareName: bareName, 
-          extension: extension
-        });
+        r.pipe(fs.createWriteStream(localAddress))
+          .on('error', err => {
+            //--- We need to clean up on error during file writing
+            console.log (`${localAddress} failed writing to disk, cleaning up...`);
+            cleanUpFile(localAddress);
+            reject({resource: fileAddress, error: err});
+          })
+          .on('finish', () => {
+            resolve({
+                  successful: true,
+                  resource: fileAddress,
+                  result: resp,
+                  cachedFileAddress: localAddress,
+                  cachedFileName: physicalFileName,
+                  bareName: bareName,
+                  extension: extension
+            });
+          });
       }
       else {
         //--- NO OK
