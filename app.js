@@ -3,6 +3,7 @@ import { CronJob } from 'cron';
 import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
+import path from 'path';
 
 /**
 * Environment constants
@@ -169,8 +170,6 @@ const fetchingJob = async function() {
     await setStatus(uri, CACHED, parseInt(downloadResult.result.statusCode), timesTried + 1);
     console.log (`${url} is cached successfully`);
   });
-
-  await Promise.all(promises);
 };
 
 const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; }
@@ -242,14 +241,14 @@ const downloadFile = async function (fileAddress) {
       //check things about the response here.
       const code = resp.statusCode;
       
-      if (200 <= code ** code < 300) {
+      if (200 <= code && code < 300) {
         //--- OK
         //--- write the file
         const mimeType = resp.headers['content-type'];
-        let extension = mime.extension(mimeType);
+        let extension = mime.extension(mimeType) || '.txt';
         let bareName = makeFileName();
         let physicalFileName = [bareName, extension].join('.');
-        let localAddress = `${FILE_STORAGE}/${physicalFileName}`;
+        let localAddress = path.join(FILE_STORAGE, physicalFileName);
 
         r.pipe(fs.createWriteStream(localAddress));
 
