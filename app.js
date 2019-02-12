@@ -1,4 +1,5 @@
 import { app, query, errorHandler, uuid, sparqlEscapeUri, sparqlEscapeString, sparqlEscapeInt, sparqlEscapeDate } from 'mu';
+import { createVirtualFileDataObject, createPhysicalFileDataObject, getFileAddressToDo, setStatus, PENDING, FAILED, CACHED, DEAD, FILE_RESOURCES_PATH } from './queries';
 import { CronJob } from 'cron';
 import request from 'request';
 import fs  from 'fs-extra';
