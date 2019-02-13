@@ -13,6 +13,11 @@ const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 const CRON_FREQUENCY = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
 
+/**
+* Internal Constants
+*/
+const DEFAULT_CONTENT_TYPE = 'text/plain';
+const DEFAULT_EXTENSION = '.txt'
 
 app.get('/', function( req, res ) {
   res.send(`
@@ -143,8 +148,8 @@ async function downloadFile (fileAddress) {
       if (200 <= code && code < 300) {
         //--- OK
         //--- write the file
-        const mimeType = resp.headers['content-type'];
-        let extension = mime.extension(mimeType) || '.txt';
+        const mimeType = resp.headers['content-type'] || DEFAULT_CONTENT_TYPE;
+        let extension = mime.extension(mimeType) || DEFAULT_EXTENSION;
         let bareName = makeFileName();
         let physicalFileName = [bareName, extension].join('.');
         let localAddress = path.join(FILE_STORAGE, physicalFileName);
@@ -196,15 +201,29 @@ async function associateCachedFile (downloadResult) {
 
   try {
 
- //First create the virtual file.
-  let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
-  let result = await createVirtualFileDataObject(fileObjectUri, uri, name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
+    let contentType = headers['content-type'] || DEFAULT_CONTENT_TYPE;
+    let created = Date.now();
+    let extension = downloadResult.extension; 
 
-  //create the physical file
-  let physicalUri = 'share://' + downloadResult.cachedFileName; //we assume filename here
-  let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
-                                                              fileObjectUri,
-                                                              name, headers['content-type'], fileSize, downloadResult.extension, headers['date']);
+    //First create the virtual file.
+    let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
+    let result = await createVirtualFileDataObject(fileObjectUri,
+                                                  uri,
+                                                  name,
+                                                  contentType,
+                                                  fileSize,
+                                                  extension,
+                                                  created);
+
+    //create the physical file
+    let physicalUri = 'share://' + downloadResult.cachedFileName; //we assume filename here
+    let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
+                                                                fileObjectUri,
+                                                                name,
+                                                                contentType,
+                                                                fileSize,
+                                                                extension,
+                                                                created);
   }
   catch (err) {
     console.log('Error while associating a downloaded file to a FileAddress object');
