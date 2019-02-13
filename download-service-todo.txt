@@ -3,6 +3,7 @@ CODE REVIEW
 
 TODO
 --------
+- BUG: setting to PENDING the first time seems to reset the times tried to 0
 - uncomment chron job
 - [OPTIONAL]: replace "cached" with uri a little cleaner. But really not mandatarory
 - attach the virual file to formulier. Ask felix for exact triple
