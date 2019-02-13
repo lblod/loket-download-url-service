@@ -50,8 +50,6 @@ async function getFileAddressToDo ( caching_max_retries ) {
 
       FILTER (
         (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
-        &&
-        (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(caching_max_retries)})
       )
     }
   `;
@@ -64,7 +62,7 @@ async function getFileAddressToDo ( caching_max_retries ) {
 };
 
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
-
+  
   console.log(`Setting ${statusLabel} status for ${uri}`);
 
   const uid = uuid();
