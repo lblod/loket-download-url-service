@@ -34,7 +34,7 @@ async function getFileAddressToDo ( caching_max_retries ) {
     SELECT ?uri ?url ?timesTried ?statusLabel {
 
       ?s toezicht:fileAddress ?uri ;
-          adms:status <http://data.lblod.info/document-statuses/verstuurd> .
+         adms:status <http://data.lblod.info/document-statuses/verstuurd> .
 
       ?uri ext:fileAddress ?url .
 
@@ -55,8 +55,12 @@ async function getFileAddressToDo ( caching_max_retries ) {
       )
     }
   `;
-  
-  return await query(q);
+  try {
+    return await query(q);
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
 };
 
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
