@@ -127,7 +127,7 @@ const createVirtualFileDataObject = async function(fileObjectUri, fileAddressUri
             ${UUID_URI} ${sparqlEscapeString(uid)}.
 
         # associate it to our original FileAddress object
-        ${sparqlEscapeUri(fileAddressUri)} nie:dataSource  ${sparqlEscapeUri(fileObjectUri)}.
+        ${sparqlEscapeUri(fileObjectUri)} nie:dataSource  ${sparqlEscapeUri(fileAddressUri)}.
 
         #HACK for the sprintf issue
         ${sparqlEscapeUri(fileAddressUri)} ?p ?o.
