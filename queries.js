@@ -31,6 +31,11 @@ const getFileAddressToDo = async function( caching_max_retries ) {
 
       ?uri a ext:FileAddress ;
           ext:fileAddress ?url .
+      
+      ?toezicht toezicht:fileAddress ?uri ;
+        adms:status ?docStat .
+
+      ?docStat skos:prefLabel ?docStatLabel .
 
       OPTIONAL {
         ?uri ext:fileAddressCacheStatus ?statusUri .
@@ -39,10 +44,12 @@ const getFileAddressToDo = async function( caching_max_retries ) {
 
       OPTIONAL {
         ?uri ext:fileAddressCacheStatus ?statusUri .
-        ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel.
+        ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel .
       }
 
       FILTER (
+        (?docStatLabel = 'verstuurd')
+        &&
         (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
         &&
         (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(caching_max_retries)})
