@@ -9,7 +9,7 @@ import path from 'path';
 /**
 * Environment constants
 */
-const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
+const CACHING_MAX_RETRIES = parseInt(process.env.CACHING_MAX_RETRIES) || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 const CRON_FREQUENCY = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
 
@@ -125,7 +125,10 @@ async function fetchingJob () {
   });
 }
 
-function getStatusLabelFor (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; }
+function getStatusLabelFor (times) { 
+  let val = times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD;
+  return val;
+}
 
 function makeFileName() {
   return uuid();
