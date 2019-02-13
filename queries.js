@@ -7,6 +7,8 @@ const UUID_URI = '<http://mu.semte.ch/vocabularies/core/uuid>';
 const EXT_PREFIX = 'ext: <http://mu.semte.ch/vocabularies/ext/>';
 const NFO_PREFIX = 'nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>';
 const NIE_PREFIX = 'nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>';
+const TOEZICHT_PREFIX = 'toezicht: <http://mu.semte.ch/vocabularies/ext/supervision/>';
+const ADMS_PREFIX = 'adms: <http://www.w3.org/ns/adms#>';
 const DCT_PREFIX = 'dct: <http://purl.org/dc/terms/>';
 const STATUS_RESOURCES_PATH = "http://data.lblod.info/file-address-cache-statuses";
 const FILE_RESOURCES_PATH = "http://data.lblod.info/files/";
@@ -26,6 +28,8 @@ const getFileAddressToDo = async function( caching_max_retries ) {
   //--- get a list of all failed FileAddress objects
   let q = `
     PREFIX ${EXT_PREFIX}
+    PREFIX ${TOEZICHT_PREFIX}
+    PREFIX ${ADMS_PREFIX}
 
     SELECT ?uri ?url ?timesTried ?statusLabel {
 
@@ -58,6 +62,8 @@ const getFileAddressToDo = async function( caching_max_retries ) {
   `;
    return await query(q);
 };
+
+
 
 const setStatus = async function (uri, statusLabel, responseCode = null, timesTried = 0) {
 
