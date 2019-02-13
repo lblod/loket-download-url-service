@@ -3,7 +3,7 @@ CODE REVIEW
 
 TODO
 --------
-- FELIX TODO: check what is wrong with the file not availible for fileService.
+- uncomment chron job
 - [OPTIONAL]: replace "cached" with uri a little cleaner. But really not mandatarory
 - attach the virual file to formulier. Ask felix for exact triple
 - provide sensible defaults for things which possibly be not returned from the server. eg date mimetype etc
