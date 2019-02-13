@@ -52,9 +52,9 @@ new CronJob(CRON_FREQUENCY, async function() {
 //------ failed
 //------ cached
 //------ dead
-const fetchingJob = async function() {
+async function fetchingJob () {
 
-  let response = await getFileAddressToDo();
+  let response = await getFileAddressToDo(CACHING_MAX_RETRIES);
   let fileAddresses = response.results.bindings;
 
   //--- start the process of downloading the resources
@@ -121,13 +121,13 @@ const fetchingJob = async function() {
   });
 };
 
-const statLabel = function (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; };
+function statLabel (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; };
 
-const makeFileName = function() {
+function makeFileName() {
   return uuid();
 };
 
-const downloadFile = async function (fileAddress) {
+async function downloadFile (fileAddress) {
 
   return new Promise((resolve, reject) => {
 
@@ -184,7 +184,7 @@ const downloadFile = async function (fileAddress) {
   });
 }
 
-const associateCachedFile = async function (downloadResult) {
+async function associateCachedFile (downloadResult) {
 
   const uri = downloadResult.resource.uri.value;
   const name = downloadResult.cachedFileName;
@@ -215,7 +215,7 @@ const associateCachedFile = async function (downloadResult) {
   }
 };
 
-const cleanUpFile = function(path){
+function cleanUpFile (path){
   if(fs.existsSync(path)){
     fs.unlinkSync(path);
   }

@@ -24,7 +24,7 @@ const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
 
-const getFileAddressToDo = async function( caching_max_retries ) {
+async function getFileAddressToDo ( caching_max_retries ) {
   //--- get a list of all failed FileAddress objects
   let q = `
     PREFIX ${EXT_PREFIX}
@@ -33,13 +33,10 @@ const getFileAddressToDo = async function( caching_max_retries ) {
 
     SELECT ?uri ?url ?timesTried ?statusLabel {
 
-      ?uri a ext:FileAddress ;
-          ext:fileAddress ?url .
-      
-      ?toezicht toezicht:fileAddress ?uri ;
-        adms:status ?docStat .
+      ?s toezicht:fileAddress ?uri ;
+          adms:status <http://data.lblod.info/document-statuses/verstuurd> .
 
-      ?docStat skos:prefLabel ?docStatLabel .
+      ?uri ext:fileAddress ?url .
 
       OPTIONAL {
         ?uri ext:fileAddressCacheStatus ?statusUri .
@@ -52,20 +49,17 @@ const getFileAddressToDo = async function( caching_max_retries ) {
       }
 
       FILTER (
-        (?docStatLabel = 'verstuurd')
-        &&
         (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
         &&
         (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(caching_max_retries)})
       )
     }
   `;
-   return await query(q);
+  
+  return await query(q);
 };
 
-
-
-const setStatus = async function (uri, statusLabel, responseCode = null, timesTried = 0) {
+async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
 
   console.log(`Setting ${statusLabel} status for ${uri}`);
 
@@ -119,7 +113,7 @@ const setStatus = async function (uri, statusLabel, responseCode = null, timesTr
   }
 };
 
-const createVirtualFileDataObject = async function(fileObjectUri, fileAddressUri, name, type, fileSize, extension, created){
+async function createVirtualFileDataObject (fileObjectUri, fileAddressUri, name, type, fileSize, extension, created){
   const uid = uuid();
   let q = `
     PREFIX ${EXT_PREFIX}
@@ -150,7 +144,7 @@ const createVirtualFileDataObject = async function(fileObjectUri, fileAddressUri
   return await query( q );
 };
 
-const createPhysicalFileDataObject = async function(fileObjectUri, dataSourceUri, name, type, fileSize, extension, created){
+async function createPhysicalFileDataObject (fileObjectUri, dataSourceUri, name, type, fileSize, extension, created){
   //TODO: merge with pervious query
   const uid = uuid();
   let q = `
