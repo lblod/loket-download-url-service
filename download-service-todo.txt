@@ -3,9 +3,9 @@ CODE REVIEW
 
 TODO
 --------
-- FELIX TODO: check what is wrong with the file not availible for fileService.
+- BUG: setting to PENDING the first time seems to reset the times tried to 0
+- uncomment chron job
 - [OPTIONAL]: replace "cached" with uri a little cleaner. But really not mandatarory
-- attach the virual file to formulier. Ask felix for exact triple
 - provide sensible defaults for things which possibly be not returned from the server. eg date mimetype etc
 - The jobs in PENDING should have timeout! (see e.g. https://github.com/lblod/deliver-bbcdr-rapporten-service/blob/master/app.js#L22)
   We have to make sure we have the redirect. https://github.com/lblod/loket-download-url-service/blob/master/app.js#L97
