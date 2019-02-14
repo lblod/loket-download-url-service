@@ -24,6 +24,8 @@ const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
 
+const MAX_PENDING_TIME_IN_SECONDS = 30;
+
 async function getFileAddressToDo ( caching_max_retries ) {
   //--- get a list of all failed FileAddress objects
   let q = `
@@ -48,8 +50,19 @@ async function getFileAddressToDo ( caching_max_retries ) {
         ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel .
       }
 
+      OPTIONAL {
+        ?uri ext:fileAddressCacheStatus ?statusUri .
+        ?statusUri ext:fileAddressCacheStatusInitiationTime ?timeInitiated .
+      }
+
+      BIND (IF (BOUND(?timeInitiated), NOW() - ?timeInitiated, 0) as ?elapsed) .
+
       FILTER (
-        (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
+        (!BOUND(?statusLabel) 
+        || 
+        ?statusLabel = ${sparqlEscapeString(FAILED)}
+        ||
+        (?statusLabel = ${sparqlEscapeString(PENDING)} && ?elapsed > ${MAX_PENDING_TIME_IN_SECONDS}))
       )
     }
   `;
