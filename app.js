@@ -14,16 +14,10 @@ const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 const CRON_FREQUENCY = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
 
 /**
-<<<<<<< HEAD
-* Internal Constants
-*/
-const DEFAULT_CONTENT_TYPE = 'text/plain';
-const DEFAULT_EXTENSION = '.txt'
-=======
 * Internal constants
 */
 const DEFAULT_EXTENSION = '.html';
->>>>>>> master
+const DEFAULT_CONTENT_TYPE = 'text/plain';
 
 app.get('/', function( req, res ) {
   res.send(`
@@ -51,22 +45,21 @@ app.get('/checkurls', async function( req, res ){
 
 app.use(errorHandler);
 
-/*
 new CronJob(CRON_FREQUENCY, async function() {
   console.log(`Download-url service triggered by cron job at ${new Date().toISOString()}`);
   await fetchingJob();
 }, null, true);
-*/
 
-//--- List of available statuses
-//------ pending
-//------ failed
-//------ cached
-//------ dead
+/**
+ * This function fetches the resources
+ * from urls provided in the database
+ * and caches them locally
+ */
 async function fetchingJob () {
   
+  //--- get the list of resource urls
   const fileAddresses = await getFileAddressToDo(CACHING_MAX_RETRIES);
-  
+
   //--- start the process of downloading the resources
   const promises = fileAddresses.map( async (fileAddress) => {
     
@@ -131,15 +124,28 @@ async function fetchingJob () {
   });
 }
 
+/**
+ * Decides on the label of this item's new status
+ * 
+ * @param {number} times The number of times this resource has already been tried
+ */
 function getStatusLabelFor (times) { 
   let val = times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD;
   return val;
 }
 
+/**
+ * Makes a name for the local file in which the data is cached
+ */
 function makeFileName() {
   return uuid();
 }
 
+/**
+ * Downloads the resource and takes care of errors
+ * 
+ * @param { uri, url, timesTried, statusLabel } fileAddress The necessary data from the FileAddress object
+ */
 async function downloadFile (fileAddress) {
 
   return new Promise((resolve, reject) => {
@@ -154,16 +160,9 @@ async function downloadFile (fileAddress) {
 
       //Note: by default, redirects are followed :-)
       if (200 <= code && code < 300) {
-<<<<<<< HEAD
-        //--- OK
-        //--- write the file
-        const mimeType = resp.headers['content-type'] || DEFAULT_CONTENT_TYPE;
-        let extension = mime.extension(mimeType) || DEFAULT_EXTENSION;
-=======
         //--- Status: OK
         //--- create file attributes
         let extension = getExtensionFrom(resp.headers);
->>>>>>> master
         let bareName = makeFileName();
         let physicalFileName = [bareName, extension].join('.');
         let localAddress = path.join(FILE_STORAGE, physicalFileName);
@@ -204,6 +203,10 @@ async function downloadFile (fileAddress) {
   });
 }
 
+/**
+ * Creates an association between the cached file and the original FileAddress in the database
+ * @param {custom object} downloadResult Data about the last download attempt's result. The actual content may vary depending on the situation.
+ */
 async function associateCachedFile (downloadResult) {
 
   const uri = downloadResult.resource.uri.value;
@@ -215,20 +218,11 @@ async function associateCachedFile (downloadResult) {
   const stats = fs.statSync(downloadResult.cachedFileAddress);
   const fileSize = stats.size;
 
-<<<<<<< HEAD
-  try {
-
-    let contentType = headers['content-type'] || DEFAULT_CONTENT_TYPE;
-    let created = Date.now();
-    let extension = downloadResult.extension; 
-
-=======
   //--- read data from HTTP response heades
   const headers = downloadResult.result.headers;
   const contentType = getContentTypeFrom(headers);
 
   try {
->>>>>>> master
     //First create the virtual file.
     let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
     let result = await createVirtualFileDataObject(fileObjectUri,
@@ -237,12 +231,7 @@ async function associateCachedFile (downloadResult) {
                                                   contentType,
                                                   fileSize,
                                                   extension,
-<<<<<<< HEAD
-                                                  created);
-
-=======
                                                   date);
->>>>>>> master
     //create the physical file
     let physicalUri = 'share://' + downloadResult.cachedFileName; //we assume filename here
     let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
@@ -251,11 +240,7 @@ async function associateCachedFile (downloadResult) {
                                                                 contentType,
                                                                 fileSize,
                                                                 extension,
-<<<<<<< HEAD
-                                                                created);
-=======
                                                                 date);
->>>>>>> master
   }
   catch (err) {
     console.log('Error while associating a downloaded file to a FileAddress object');
@@ -266,16 +251,31 @@ async function associateCachedFile (downloadResult) {
   }
 }
 
+/**
+ * Deletes a file.
+ * Is intended to be used for deleting orphant files after a failure.
+ * @param {string} path Local path to a file
+ */
 function cleanUpFile (path){
   if(fs.existsSync(path)){
     fs.unlinkSync(path);
   }
 }
 
+/**
+ * Parses response headers to get the file content-type
+ * 
+ * @param {array} headers HTML response header
+ */
 function getContentTypeFrom(headers) {
-  return headers['content-type'] || 'text/plain';
+  return headers['content-type'] || DEFAULT_CONTENT_TYPE;
 }
 
+/**
+ * Parses response headers to get the file extension
+ * 
+ * @param {array} headers HTML response header
+ */
 function getExtensionFrom(headers) {
   const mimeType = headers['content-type'];
   return mime.extension(mimeType) || DEFAULT_EXTENSION;

@@ -24,8 +24,15 @@ const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
 
-const MAX_PENDING_TIME_IN_SECONDS = process.env.CACHING_MAX_PENDING_TIME_IN_SECONDS || 3600; //--- 1 hour as default
+const MAX_PENDING_TIME_IN_SECONDS = 15; //process.env.CACHING_MAX_PENDING_TIME_IN_SECONDS || 3600; //--- 1 hour as default
 
+/**
+ * Queries the database for elligible FileAddress objects
+ * These include FileAddress objects which either have not been tried before or have failed.
+ * Also, items which have been downloading for a long time are included.
+ * 
+ * @param {number} caching_max_retries The maximum number of times an item shall be tried
+ */
 async function getFileAddressToDo ( caching_max_retries ) {
   //--- get a list of all failed FileAddress objects
   let q = `
@@ -67,7 +74,7 @@ async function getFileAddressToDo ( caching_max_retries ) {
     }
   `;
 
-  let qResults = []
+  let qResults = [];
   try {
     qResults = await query(q);
   } catch (err) {
@@ -78,6 +85,13 @@ async function getFileAddressToDo ( caching_max_retries ) {
   return qResults.results.bindings || [];
 };
 
+/**
+ * 
+ * @param {uri} uri The FileAddress uri
+ * @param {string} statusLabel New status's label
+ * @param {number} responseCode If we are setting the status because of some server response, this is that rsponse's code
+ * @param {number} timesTried Keeps track of how many times this item has been tried up to now
+ */
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
   
   console.log(`Setting ${statusLabel} status for ${uri}`);
