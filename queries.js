@@ -94,7 +94,7 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
         ?statusUri a
             ext:FileAddressCacheStatus ;
             ext:fileAddressCacheStatusLabel ${sparqlEscapeString(statusLabel)} ;
-            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)}` : ''} ;
+            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)};` : ''} 
             ext:fileAddressCacheStatusTimesRetried ${sparqlEscapeInt(timesTried)} ;
             ext:fileAddressCacheStatusInitiationTime ${sparqlEscapeDate(Date.now())} ;
             ${UUID_URI} ${sparqlEscapeString(uid)} .
