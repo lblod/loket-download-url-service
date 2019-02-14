@@ -24,7 +24,7 @@ const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
 
-const MAX_PENDING_TIME_IN_SECONDS = 15; //process.env.CACHING_MAX_PENDING_TIME_IN_SECONDS || 3600; //--- 1 hour as default
+const MAX_PENDING_TIME_IN_SECONDS = process.env.MAX_PENDING_TIME_IN_SECONDS || 3600; //--- 1 hour as default
 
 /**
  * Queries the database for elligible FileAddress objects
@@ -34,6 +34,7 @@ const MAX_PENDING_TIME_IN_SECONDS = 15; //process.env.CACHING_MAX_PENDING_TIME_I
  * @param {number} caching_max_retries The maximum number of times an item shall be tried
  */
 async function getFileAddressToDo ( caching_max_retries ) {
+  
   //--- get a list of all failed FileAddress objects
   let q = `
     PREFIX ${EXT_PREFIX}
