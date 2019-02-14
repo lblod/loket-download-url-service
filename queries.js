@@ -53,12 +53,16 @@ async function getFileAddressToDo ( caching_max_retries ) {
       )
     }
   `;
+
+  let qResults = []
   try {
-    return await query(q);
+    qResults = await query(q);
   } catch (err) {
+    console.log(`Error while querying the list of fileAddresses`)
     console.log(err);
-    throw err;
   }
+  
+  return qResults.results.bindings || [];
 };
 
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {

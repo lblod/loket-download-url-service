@@ -58,11 +58,10 @@ new CronJob(CRON_FREQUENCY, async function() {
 //------ dead
 async function fetchingJob () {
   
-  let response = await getFileAddressToDo(CACHING_MAX_RETRIES);
-  let fileAddresses = response.results.bindings;
+  const fileAddresses = await getFileAddressToDo(CACHING_MAX_RETRIES);
   
   //--- start the process of downloading the resources
-  let promises = fileAddresses.map( async (fileAddress) => {
+  const promises = fileAddresses.map( async (fileAddress) => {
     
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
