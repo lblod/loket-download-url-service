@@ -1,4 +1,4 @@
-import { query, uuid, sparqlEscapeUri, sparqlEscapeString, sparqlEscapeInt, sparqlEscapeDate } from 'mu';
+import { query, uuid, sparqlEscapeUri, sparqlEscapeString, sparqlEscapeInt, sparqlEscapeDate, sparqlEscapeDateTime } from 'mu';
 
 /**
  * SPARQL constants
@@ -24,6 +24,8 @@ const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
 
+const MAX_PENDING_TIME_IN_SECONDS = 30;
+
 async function getFileAddressToDo ( caching_max_retries ) {
   //--- get a list of all failed FileAddress objects
   let q = `
@@ -48,23 +50,36 @@ async function getFileAddressToDo ( caching_max_retries ) {
         ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel .
       }
 
+      OPTIONAL {
+        ?uri ext:fileAddressCacheStatus ?statusUri .
+        ?statusUri ext:fileAddressCacheStatusInitiationTime ?timeInitiated .
+      }
+
+      BIND (IF (BOUND(?timeInitiated), NOW() - ?timeInitiated, 0) as ?elapsed) .
+
       FILTER (
-        (!BOUND(?statusLabel) || ?statusLabel = ${sparqlEscapeString(FAILED)})
-        &&
-        (!BOUND(?timesTried) || ?timesTried < ${sparqlEscapeInt(caching_max_retries)})
+        (!BOUND(?statusLabel) 
+        || 
+        ?statusLabel = ${sparqlEscapeString(FAILED)}
+        ||
+        (?statusLabel = ${sparqlEscapeString(PENDING)} && ?elapsed > ${MAX_PENDING_TIME_IN_SECONDS}))
       )
     }
   `;
+
+  let qResults = []
   try {
-    return await query(q);
+    qResults = await query(q);
   } catch (err) {
+    console.log(`Error while querying the list of fileAddresses`)
     console.log(err);
-    throw err;
   }
+  
+  return qResults.results.bindings || [];
 };
 
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
-
+  
   console.log(`Setting ${statusLabel} status for ${uri}`);
 
   const uid = uuid();
@@ -92,8 +107,9 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
         ?statusUri a
             ext:FileAddressCacheStatus ;
             ext:fileAddressCacheStatusLabel ${sparqlEscapeString(statusLabel)} ;
-            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)} ;` : ''}
-            ext:fileAddressCacheStatusTimesRetried ${sparqlEscapeInt(timesTried)};
+            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)};` : ''} 
+            ext:fileAddressCacheStatusTimesRetried ${sparqlEscapeInt(timesTried)} ;
+            ext:fileAddressCacheStatusInitiationTime ${sparqlEscapeDateTime(Date.now())} ;
             ${UUID_URI} ${sparqlEscapeString(uid)} .
         ${sparqlEscapeUri(uri)} ext:fileAddressCacheStatus ?statusUri .
       }
@@ -105,7 +121,7 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
       BIND(IRI(${sparqlEscapeString([STATUS_RESOURCES_PATH, statusLabel, uid].join('/'))}) as ?statusUri).
     }
   `;
-
+  
   try {
     return await query( q );
   }

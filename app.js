@@ -9,15 +9,21 @@ import path from 'path';
 /**
 * Environment constants
 */
-const CACHING_MAX_RETRIES = process.env.CACHING_MAX_RETRIES || 300;
+const CACHING_MAX_RETRIES = parseInt(process.env.CACHING_MAX_RETRIES) || 300;
 const FILE_STORAGE = process.env.FILE_STORAGE || '/data/files';
 const CRON_FREQUENCY = process.env.CACHING_CRON_PATTERN || '0 */15 * * * *';
 
 /**
+<<<<<<< HEAD
 * Internal Constants
 */
 const DEFAULT_CONTENT_TYPE = 'text/plain';
 const DEFAULT_EXTENSION = '.txt'
+=======
+* Internal constants
+*/
+const DEFAULT_EXTENSION = '.html';
+>>>>>>> master
 
 app.get('/', function( req, res ) {
   res.send(`
@@ -40,7 +46,7 @@ This service periodically looks for urls and tries to download and store their c
  */
 app.get('/checkurls', async function( req, res ){
   fetchingJob();
-  res.send(`Started. Repeating pattern: ${CRON_FREQUENCY}`);
+  res.send(`Started. Repeating pattern: '${CRON_FREQUENCY}'`);
 });
 
 app.use(errorHandler);
@@ -58,16 +64,15 @@ new CronJob(CRON_FREQUENCY, async function() {
 //------ cached
 //------ dead
 async function fetchingJob () {
-
-  let response = await getFileAddressToDo(CACHING_MAX_RETRIES);
-  let fileAddresses = response.results.bindings;
-
+  
+  const fileAddresses = await getFileAddressToDo(CACHING_MAX_RETRIES);
+  
   //--- start the process of downloading the resources
-  let promises = fileAddresses.map( async (fileAddress) => {
-
+  const promises = fileAddresses.map( async (fileAddress) => {
+    
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
-    const timesTried = fileAddress.hasOwnProperty('timesTried') ? fileAddress.timesTried : 0;
+    const timesTried = fileAddress.hasOwnProperty('timesTried') ? parseInt(fileAddress.timesTried.value) : 0;
 
     let downloadResult = null;
     let associationResult = null;
@@ -91,7 +96,7 @@ async function fetchingJob () {
     catch (err) {
       //--- A connection to the remote resource was not established
       //--- update the cachedStatus of the fileAddress to either FAILED or DEAD
-      await setStatus(uri, statLabel(timesTried), null, timesTried + 1);
+      await setStatus(uri, getStatusLabelFor(timesTried), null, timesTried + 1);
       return;
     }
 
@@ -115,7 +120,7 @@ async function fetchingJob () {
     } else {
       //--- Due to an error on the remote resource side, the file could not be downloaded
       //--- update the cachedStatus of the fileAddress to either FAILED or DEAD
-      await setStatus(uri, statLabel(timesTried), parseInt(downloadResult.result.statusCode), timesTried + 1);
+      await setStatus(uri, getStatusLabelFor(timesTried), parseInt(downloadResult.result.statusCode), timesTried + 1);
       return;
     }
 
@@ -124,13 +129,16 @@ async function fetchingJob () {
     await setStatus(uri, CACHED, parseInt(downloadResult.result.statusCode), timesTried + 1);
     console.log (`${url} is cached successfuly`);
   });
-};
+}
 
-function statLabel (times) { return times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD; };
+function getStatusLabelFor (times) { 
+  let val = times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD;
+  return val;
+}
 
 function makeFileName() {
   return uuid();
-};
+}
 
 async function downloadFile (fileAddress) {
 
@@ -146,14 +154,21 @@ async function downloadFile (fileAddress) {
 
       //Note: by default, redirects are followed :-)
       if (200 <= code && code < 300) {
+<<<<<<< HEAD
         //--- OK
         //--- write the file
         const mimeType = resp.headers['content-type'] || DEFAULT_CONTENT_TYPE;
         let extension = mime.extension(mimeType) || DEFAULT_EXTENSION;
+=======
+        //--- Status: OK
+        //--- create file attributes
+        let extension = getExtensionFrom(resp.headers);
+>>>>>>> master
         let bareName = makeFileName();
         let physicalFileName = [bareName, extension].join('.');
         let localAddress = path.join(FILE_STORAGE, physicalFileName);
 
+        //--- write the file
         r.pipe(fs.createWriteStream(localAddress))
           .on('error', err => {
             //--- We need to clean up on error during file writing
@@ -193,18 +208,27 @@ async function associateCachedFile (downloadResult) {
 
   const uri = downloadResult.resource.uri.value;
   const name = downloadResult.cachedFileName;
-  const headers = downloadResult.result.headers;
+  const extension = downloadResult.extension;
+  const date = Date.now();
 
   //--- get the file's size
   const stats = fs.statSync(downloadResult.cachedFileAddress);
   const fileSize = stats.size;
 
+<<<<<<< HEAD
   try {
 
     let contentType = headers['content-type'] || DEFAULT_CONTENT_TYPE;
     let created = Date.now();
     let extension = downloadResult.extension; 
 
+=======
+  //--- read data from HTTP response heades
+  const headers = downloadResult.result.headers;
+  const contentType = getContentTypeFrom(headers);
+
+  try {
+>>>>>>> master
     //First create the virtual file.
     let fileObjectUri = FILE_RESOURCES_PATH + uuid(); //WE assume trailing slash
     let result = await createVirtualFileDataObject(fileObjectUri,
@@ -213,8 +237,12 @@ async function associateCachedFile (downloadResult) {
                                                   contentType,
                                                   fileSize,
                                                   extension,
+<<<<<<< HEAD
                                                   created);
 
+=======
+                                                  date);
+>>>>>>> master
     //create the physical file
     let physicalUri = 'share://' + downloadResult.cachedFileName; //we assume filename here
     let resultPhysicalFile = await createPhysicalFileDataObject(physicalUri,
@@ -223,7 +251,11 @@ async function associateCachedFile (downloadResult) {
                                                                 contentType,
                                                                 fileSize,
                                                                 extension,
+<<<<<<< HEAD
                                                                 created);
+=======
+                                                                date);
+>>>>>>> master
   }
   catch (err) {
     console.log('Error while associating a downloaded file to a FileAddress object');
@@ -232,10 +264,19 @@ async function associateCachedFile (downloadResult) {
     console.log(`  FileAddress object: ${uri}`);
     throw err;
   }
-};
+}
 
 function cleanUpFile (path){
   if(fs.existsSync(path)){
     fs.unlinkSync(path);
   }
-};
+}
+
+function getContentTypeFrom(headers) {
+  return headers['content-type'] || 'text/plain';
+}
+
+function getExtensionFrom(headers) {
+  const mimeType = headers['content-type'];
+  return mime.extension(mimeType) || DEFAULT_EXTENSION;
+}
