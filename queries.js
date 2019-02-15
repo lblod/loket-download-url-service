@@ -41,7 +41,7 @@ async function getFileAddressToDo ( caching_max_retries ) {
     PREFIX ${TOEZICHT_PREFIX}
     PREFIX ${ADMS_PREFIX}
 
-    SELECT ?uri ?url ?timesTried ?statusLabel {
+    SELECT DISTINCT ?uri ?url ?timesTried ?statusLabel {
 
       ?s toezicht:fileAddress ?uri ;
          adms:status <http://data.lblod.info/document-statuses/verstuurd> .
