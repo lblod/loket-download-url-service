@@ -177,7 +177,7 @@ async function downloadFile (fileAddress) {
           })
           .on('finish', async function() {
             //--- read file's extension
-            const extension = getExtension(localAddress);
+            const extension = getExtension(localAddress, resp.headers);
             //--- attach the extension to file's name
             const newLocalAddress = `${localAddress}.${extension}`;
             const cachedFileName = `${bareName}.${extension}`;
@@ -286,8 +286,12 @@ function getContentTypeFrom(headers) {
  * 
  * @param {array} headers HTML response header
  */
-function getExtension(localFile) {
+function getExtension(localFile, headers) {
+
   const buffer = readChunk.sync(localFile, 0, fileType.minimumBytes);
   const type = fileType(buffer);
-  return type.ext;
+
+  const mimeType = headers['content-type'];
+
+  return mime.extension(mimeType) || type.ext || DEFAULT_EXTENSION;
 }
