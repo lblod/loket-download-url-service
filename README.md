@@ -15,9 +15,9 @@ To add the service to your stack, add the following snippet to docker-compose.ym
 
 ```
 download:
-    image: lblod/download-url-service:0.0.1
+    image: lblod/download-url-service:0.0.3
     volumes:
-      - ./data/files:/share
+      - ./data/files:/data/files
     restart: always
     logging: *default-logging
     environment:
