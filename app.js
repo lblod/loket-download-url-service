@@ -175,15 +175,25 @@ async function downloadFile (fileAddress) {
             cleanUpFile(localAddress);
             reject({resource: fileAddress, error: err});
           })
-          .on('finish', () => {
+          .on('finish', async function() {
+            //--- read file's extension
+            const extension = getExtension(localAddress);
+            //--- attach the extension to file's name
+            const newLocalAddress = `${localAddress}.${extension}`;
+            const cachedFileName = `${bareName}.${extension}`;
+            await fs.rename(
+              localAddress,
+              newLocalAddress,
+              function(err){ if ( err ) console.log('ERROR: ' + err); }
+            );
             resolve({
-                  successful: true,
-                  resource: fileAddress,
-                  result: resp,
-                  cachedFileAddress: localAddress,
-                  cachedFileName: physicalFileName,
-                  bareName: bareName,
-                  extension: extension
+              successful: true,
+              resource: fileAddress,
+              result: resp,
+              cachedFileAddress: newLocalAddress,
+              cachedFileName: cachedFileName,
+              bareName: bareName,
+              extension: extension
             });
           });
       }
