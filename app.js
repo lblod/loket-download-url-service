@@ -162,11 +162,10 @@ async function downloadFile (fileAddress) {
       //Note: by default, redirects are followed :-)
       if (200 <= code && code < 300) {
         //--- Status: OK
-        //--- create file attributes
-        let extension = getExtensionFrom(resp.headers);
-        let bareName = makeFileName();
-        let physicalFileName = [bareName, extension].join('.');
-        let localAddress = path.join(FILE_STORAGE, physicalFileName);
+        //--- create a file name without any extension
+        //--- the appropriate extension will be provided later
+        let bareName = makeFileName()
+        let localAddress = path.join(FILE_STORAGE, bareName);
 
         //--- write the file
         r.pipe(fs.createWriteStream(localAddress))
