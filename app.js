@@ -5,7 +5,8 @@ import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
 import path from 'path';
-
+import readChunk from 'read-chunk'
+import fileType from 'file-type';
 /**
 * Environment constants
 */
