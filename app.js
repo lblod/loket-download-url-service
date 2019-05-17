@@ -5,6 +5,19 @@ import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
 import path from 'path';
+import RootCas from 'ssl-root-cas/latest';
+import https  from 'https';
+
+/***
+ * Workaround for dealing with broken certificates configuration.
+ * We downloaded the missing intermediate certificates
+ */
+const rootCas = RootCas.create();
+const certificatesDir = '/app/certificates/';
+fs.readdirSync(certificatesDir).forEach(file => {
+  rootCas.addFile(certificatesDir + file);
+});
+https.globalAgent.options.ca = rootCas;
 
 /**
 * Environment constants
