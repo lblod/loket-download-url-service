@@ -23,6 +23,7 @@ const PENDING = 'pending';
 const FAILED = 'failed';
 const CACHED = 'cached';
 const DEAD = 'dead';
+const READY_TO_BE_CACHED = 'ready-to-be-cached';
 
 const MAX_PENDING_TIME_IN_SECONDS = process.env.MAX_PENDING_TIME_IN_SECONDS || 3600; //--- 1 hour as default
 
@@ -30,11 +31,10 @@ const MAX_PENDING_TIME_IN_SECONDS = process.env.MAX_PENDING_TIME_IN_SECONDS || 3
  * Queries the database for elligible FileAddress objects
  * These include FileAddress objects which either have not been tried before or have failed.
  * Also, items which have been downloading for a long time are included.
- * 
+ *
  * @param {number} caching_max_retries The maximum number of times an item shall be tried
  */
 async function getFileAddressToDo ( caching_max_retries ) {
-  
   //--- get a list of all failed FileAddress objects
   let q = `
     PREFIX ${EXT_PREFIX}
@@ -42,14 +42,14 @@ async function getFileAddressToDo ( caching_max_retries ) {
     PREFIX ${ADMS_PREFIX}
 
     SELECT DISTINCT ?uri ?url ?timesTried ?statusLabel {
+      ?uri a ext:FileAddress ;
+           ext:fileAddressCacheStatus ?statusUri .
 
-      ?s toezicht:fileAddress ?uri ;
-         adms:status <http://data.lblod.info/document-statuses/verstuurd> .
+      ?statusUri ext:fileAddressCacheStatusLabel ?statusLabel .
 
       ?uri ext:fileAddress ?url .
 
       OPTIONAL {
-        ?uri ext:fileAddressCacheStatus ?statusUri .
         ?statusUri ext:fileAddressCacheStatusTimesRetried ?timesTried .
       }
 
@@ -66,8 +66,10 @@ async function getFileAddressToDo ( caching_max_retries ) {
       BIND (IF (BOUND(?timeInitiated), NOW() - ?timeInitiated, 0) as ?elapsed) .
 
       FILTER (
-        (!BOUND(?statusLabel) 
-        || 
+        (!BOUND(?statusLabel)
+        ||
+        ?statusLabel = ${sparqlEscapeString(READY_TO_BE_CACHED)}
+        ||
         ?statusLabel = ${sparqlEscapeString(FAILED)}
         ||
         (?statusLabel = ${sparqlEscapeString(PENDING)} && ?elapsed > ${MAX_PENDING_TIME_IN_SECONDS}))
@@ -82,19 +84,19 @@ async function getFileAddressToDo ( caching_max_retries ) {
     console.log(`Error while querying the list of fileAddresses`)
     console.log(err);
   }
-  
+
   return qResults.results.bindings || [];
 };
 
 /**
- * 
+ *
  * @param {uri} uri The FileAddress uri
  * @param {string} statusLabel New status's label
  * @param {number} responseCode If we are setting the status because of some server response, this is that rsponse's code
  * @param {number} timesTried Keeps track of how many times this item has been tried up to now
  */
 async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0) {
-  
+
   console.log(`Setting ${statusLabel} status for ${uri}`);
 
   const uid = uuid();
@@ -122,7 +124,7 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
         ?statusUri a
             ext:FileAddressCacheStatus ;
             ext:fileAddressCacheStatusLabel ${sparqlEscapeString(statusLabel)} ;
-            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)};` : ''} 
+            ${responseCode != null ? `ext:fileAddressCacheStatusHttpStatus ${sparqlEscapeInt(responseCode)};` : ''}
             ext:fileAddressCacheStatusTimesRetried ${sparqlEscapeInt(timesTried)} ;
             ext:fileAddressCacheStatusInitiationTime ${sparqlEscapeDateTime(Date.now())} ;
             ${UUID_URI} ${sparqlEscapeString(uid)} .
@@ -136,7 +138,7 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
       BIND(IRI(${sparqlEscapeString([STATUS_RESOURCES_PATH, statusLabel, uid].join('/'))}) as ?statusUri).
     }
   `;
-  
+
   try {
     return await query( q );
   }
