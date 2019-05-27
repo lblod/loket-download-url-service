@@ -5,20 +5,8 @@ import request from 'request';
 import fs  from 'fs-extra';
 import mime from 'mime-types';
 import path from 'path';
-import RootCas from 'ssl-root-cas/latest';
-import https  from 'https';
-
-/***
- * Workaround for dealing with broken certificates configuration.
- * We downloaded the missing intermediate certificates
- */
-const rootCas = RootCas.create();
-const certificatesDir = '/app/certificates/';
-fs.readdirSync(certificatesDir).forEach(file => {
-  rootCas.addFile(certificatesDir + file);
-});
-https.globalAgent.options.ca = rootCas;
-
+import readChunk from 'read-chunk'
+import fileType from 'file-type';
 /**
 * Environment constants
 */
@@ -69,13 +57,13 @@ new CronJob(CRON_FREQUENCY, async function() {
  * and caches them locally
  */
 async function fetchingJob () {
-  
+
   //--- get the list of resource urls
   const fileAddresses = await getFileAddressToDo(CACHING_MAX_RETRIES);
 
   //--- start the process of downloading the resources
   const promises = fileAddresses.map( async (fileAddress) => {
-    
+
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
     const timesTried = fileAddress.hasOwnProperty('timesTried') ? parseInt(fileAddress.timesTried.value) : 0;
@@ -139,10 +127,10 @@ async function fetchingJob () {
 
 /**
  * Decides on the label of this item's new status
- * 
+ *
  * @param {number} times The number of times this resource has already been tried
  */
-function getStatusLabelFor (times) { 
+function getStatusLabelFor (times) {
   let val = times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD;
   return val;
 }
@@ -156,7 +144,7 @@ function makeFileName() {
 
 /**
  * Downloads the resource and takes care of errors
- * 
+ *
  * @param { uri, url, timesTried, statusLabel } fileAddress The necessary data from the FileAddress object
  */
 async function downloadFile (fileAddress) {
@@ -174,11 +162,10 @@ async function downloadFile (fileAddress) {
       //Note: by default, redirects are followed :-)
       if (200 <= code && code < 300) {
         //--- Status: OK
-        //--- create file attributes
-        let extension = getExtensionFrom(resp.headers);
-        let bareName = makeFileName();
-        let physicalFileName = [bareName, extension].join('.');
-        let localAddress = path.join(FILE_STORAGE, physicalFileName);
+        //--- create a file name without any extension
+        //--- the appropriate extension will be provided later
+        let bareName = makeFileName()
+        let localAddress = path.join(FILE_STORAGE, bareName);
 
         //--- write the file
         r.pipe(fs.createWriteStream(localAddress))
@@ -188,15 +175,25 @@ async function downloadFile (fileAddress) {
             cleanUpFile(localAddress);
             reject({resource: fileAddress, error: err});
           })
-          .on('finish', () => {
+          .on('finish', async function() {
+            //--- read file's extension
+            const extension = getExtension(localAddress, resp.headers);
+            //--- attach the extension to file's name
+            const newLocalAddress = `${localAddress}.${extension}`;
+            const cachedFileName = `${bareName}.${extension}`;
+            await fs.rename(
+              localAddress,
+              newLocalAddress,
+              function(err){ if ( err ) console.log('ERROR: ' + err); }
+            );
             resolve({
-                  successful: true,
-                  resource: fileAddress,
-                  result: resp,
-                  cachedFileAddress: localAddress,
-                  cachedFileName: physicalFileName,
-                  bareName: bareName,
-                  extension: extension
+              successful: true,
+              resource: fileAddress,
+              result: resp,
+              cachedFileAddress: newLocalAddress,
+              cachedFileName: cachedFileName,
+              bareName: bareName,
+              extension: extension
             });
           });
       }
@@ -277,7 +274,7 @@ function cleanUpFile (path){
 
 /**
  * Parses response headers to get the file content-type
- * 
+ *
  * @param {array} headers HTML response header
  */
 function getContentTypeFrom(headers) {
@@ -286,10 +283,15 @@ function getContentTypeFrom(headers) {
 
 /**
  * Parses response headers to get the file extension
- * 
+ *
  * @param {array} headers HTML response header
  */
-function getExtensionFrom(headers) {
+function getExtension(localFile, headers) {
+
+  const buffer = readChunk.sync(localFile, 0, fileType.minimumBytes);
+  const type = fileType(buffer);
+
   const mimeType = headers['content-type'];
-  return mime.extension(mimeType) || DEFAULT_EXTENSION;
+
+  return mime.extension(mimeType) || type.ext || DEFAULT_EXTENSION;
 }
