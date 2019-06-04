@@ -57,13 +57,13 @@ new CronJob(CRON_FREQUENCY, async function() {
  * and caches them locally
  */
 async function fetchingJob () {
-  
+
   //--- get the list of resource urls
   const fileAddresses = await getFileAddressToDo(CACHING_MAX_RETRIES);
 
   //--- start the process of downloading the resources
   const promises = fileAddresses.map( async (fileAddress) => {
-    
+
     const uri = fileAddress.uri.value;
     const url = fileAddress.url.value;
     const timesTried = fileAddress.hasOwnProperty('timesTried') ? parseInt(fileAddress.timesTried.value) : 0;
@@ -127,10 +127,10 @@ async function fetchingJob () {
 
 /**
  * Decides on the label of this item's new status
- * 
+ *
  * @param {number} times The number of times this resource has already been tried
  */
-function getStatusLabelFor (times) { 
+function getStatusLabelFor (times) {
   let val = times + 1 < CACHING_MAX_RETRIES ? FAILED : DEAD;
   return val;
 }
@@ -144,7 +144,7 @@ function makeFileName() {
 
 /**
  * Downloads the resource and takes care of errors
- * 
+ *
  * @param { uri, url, timesTried, statusLabel } fileAddress The necessary data from the FileAddress object
  */
 async function downloadFile (fileAddress) {
@@ -274,7 +274,7 @@ function cleanUpFile (path){
 
 /**
  * Parses response headers to get the file content-type
- * 
+ *
  * @param {array} headers HTML response header
  */
 function getContentTypeFrom(headers) {
@@ -283,7 +283,7 @@ function getContentTypeFrom(headers) {
 
 /**
  * Parses response headers to get the file extension
- * 
+ *
  * @param {array} headers HTML response header
  */
 function getExtension(localFile, headers) {
