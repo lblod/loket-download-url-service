@@ -1,5 +1,6 @@
 import { uuid, sparqlEscapeUri, sparqlEscapeString, sparqlEscapeInt, sparqlEscapeDate, sparqlEscapeDateTime } from 'mu';
 import { querySudo as query } from '@lblod/mu-auth-sudo';
+import { updateSudo as update } from '@lblod/mu-auth-sudo';
 /**
  * SPARQL constants
  */
@@ -114,9 +115,11 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
         ${sparqlEscapeUri(uri)} ext:fileAddressCacheStatus ?status .
         ?status ?p ?o .
       }
-    }
+    }`;
 
-    ;
+  await query(q);
+  q = `
+    PREFIX ${EXT_PREFIX}
 
     INSERT {
       GRAPH ?g {
@@ -152,14 +155,15 @@ async function setStatus (uri, statusLabel, responseCode = null, timesTried = 0)
 async function createVirtualFileDataObject (fileObjectUri, fileAddressUri, name, type, fileSize, extension, created){
   const uid = uuid();
   let q = `
-    PREFIX ${EXT_PREFIX}
-    PREFIX ${NFO_PREFIX}
-    PREFIX ${NIE_PREFIX}
-    PREFIX ${DCT_PREFIX}
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+    PREFIX nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX dbpedia: <http://dbpedia.org/resource/>
 
-    INSERT {
+    INSERT DATA {
       GRAPH <http://mu.semte.ch/graphs/public> {
-        # make a file resource
         ${sparqlEscapeUri(fileObjectUri)} a
             nfo:FileDataObject;
             nfo:fileName ${sparqlEscapeString(name)};
@@ -169,27 +173,25 @@ async function createVirtualFileDataObject (fileObjectUri, fileAddressUri, name,
             nfo:fileCreated ${sparqlEscapeDate(created)};
             ${UUID_URI} ${sparqlEscapeString(uid)}.
 
-        # associate it to our original FileAddress object
         ${sparqlEscapeUri(fileObjectUri)} nie:dataSource  ${sparqlEscapeUri(fileAddressUri)}.
-
-        #HACK for the sprintf issue
-        ${sparqlEscapeUri(fileAddressUri)} ?p ?o.
       }
     }
   `;
-  return await query( q );
+  return await update( q );
 };
 
 async function createPhysicalFileDataObject (fileObjectUri, dataSourceUri, name, type, fileSize, extension, created){
   //TODO: merge with pervious query
   const uid = uuid();
   let q = `
-    PREFIX ${EXT_PREFIX}
-    PREFIX ${NFO_PREFIX}
-    PREFIX ${NIE_PREFIX}
-    PREFIX ${DCT_PREFIX}
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+    PREFIX nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX dbpedia: <http://dbpedia.org/resource/>
 
-    INSERT {
+    INSERT DATA {
       GRAPH <http://mu.semte.ch/graphs/public> {
         ${sparqlEscapeUri(fileObjectUri)} a nfo:FileDataObject;
               nfo:fileName ${sparqlEscapeString(name)};
@@ -199,13 +201,10 @@ async function createPhysicalFileDataObject (fileObjectUri, dataSourceUri, name,
               nfo:fileSize ${sparqlEscapeInt(fileSize)};
               dbpedia:fileExtension ${sparqlEscapeString(extension)};
               nfo:fileCreated ${sparqlEscapeDate(created)}.
-
-        #HACK for the sprintf issue
-        ${sparqlEscapeUri(dataSourceUri)} ?p ?o.
       }
     }
   `;
-  return await query( q );
+  return await update( q );
 };
 
 export { createVirtualFileDataObject, createPhysicalFileDataObject, getFileAddressToDo, setStatus, PENDING, FAILED, CACHED, DEAD, FILE_RESOURCES_PATH}
